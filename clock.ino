@@ -7,6 +7,9 @@
 #include <WiFiUdp.h>
 #include <TimeLib.h>
 #include <time.h>
+#include <SPI.h>  // not used here, but needed to prevent a RTClib compile error
+#include "RTClib.h"
+#include <TimerEvent.h>
 #define pixel u8g2_font_crox4hb_tr
 #define profont u8g_font_profont22
 #define vcr  u8g2_font_VCR_OSD_tr
@@ -15,14 +18,31 @@
 #define lab  u8g2_font_lastapprenticebold_tr
 #define fub  u8g2_font_fub17_t_symbol
 #define logis u8g2_font_logisoso16_tn
- 
+const unsigned int timerPeriod = 7200000;
 const char *ssid     = "Home-WDE3";
 const char *password = "cataliNn2015";
 const char *ssid1     = "OpiliteX_HsP";
 const char *password1 = "hYp3r70ACe";
-//const int showclock = D7;
-
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+int GTMOffset = 2;
+
+WiFiUDP ntpUDP;
+RTC_DS3231 RTC;
+NTPClient timeClient(ntpUDP, "de.pool.ntp.org", GTMOffset*60*60, 60*60*1000);
+// By default 'pool.ntp.org' is used with 60 seconds update interval and no offset
+U8G2_SH1106_128X64_NONAME_F_HW_I2C oled(U8G2_R0);
+TimerEvent adjustTimer;
+DateTime nowie = RTC.now();
+
+String h = (String) nowie.hour();
+String mi = (String) nowie.minute();
+String s = (String) nowie.second();
+String y = (String) nowie.year();
+String mo = (String) nowie.month();
+String d = (String) nowie.day();
+String w_Weekday = (String) nowie.dayOfTheWeek();
+String t_Time = h +"/"+ mi +"/"+ s; 
+String d_Date = y +"/"+ mo +"/"+ d;
 
 static tm getDateTimeByParams(long time){
     struct tm *newtime;
@@ -30,47 +50,27 @@ static tm getDateTimeByParams(long time){
     newtime = localtime(&tim);
     return *newtime;
 }
-
 static String getDateTimeStringByParams(tm *newtime, char* pattern = (char *)"%d/%m/%Y %H:%M:%S"){
     char buffer[30];
     strftime(buffer, 30, pattern, newtime);
     return buffer;
 }
- 
-/**
- * Input time in epoch format format and return String with format pattern
- * by Renzo Mischianti <www.mischianti.org> 
- */
-static String getTimeString(long time, char* time_pattern = (char *)"%H:%M:%S"){
-//    struct tm *newtime;
-    tm newtime;
-    newtime = getDateTimeByParams(time);
-    return getDateTimeStringByParams(&newtime, time_pattern);
-}
-static String getDateString(long date, char* date_pattern = (char *)"%d/%m/%Y"){
+static String getDateString(long date, char* date_pattern = (char *)"%Y/%m/%d"){
 //    struct tm *newtime;
     tm newdate;
     newdate = getDateTimeByParams(date);
     return getDateTimeStringByParams(&newdate, date_pattern);
 }
- 
-WiFiUDP ntpUDP;
- 
-// By default 'pool.ntp.org' is used with 60 seconds update interval and
-// no offset
-// NTPClient timeClient(ntpUDP);
+
+void  RTCadjust_update(){
+  RTC.adjust(DateTime(getDateString(now()).c_str(), timeClient.getFormattedTime().c_str()));
+}
+
 void setupOTA() {
-  // Port defaults to 8266
-  // ArduinoOTA.setPort(8266);
-
-  // Hostname defaults to esp8266-[ChipID]
-  //ArduinoOTA.setHostname("DoorLock_001");
-
-  // No authentication by default
-  //ArduinoOTA.setPassword("00340435091302008961");
-
-  // Password can be set with it's md5 value as well
-  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3
+  // ArduinoOTA.setPort(8266);// Port defaults to 8266
+  //ArduinoOTA.setHostname("DoorLock_001");// Hostname defaults to esp8266-[ChipID]
+  //ArduinoOTA.setPassword("00340435091302008961");  // No authentication by default
+  // MD5(admin) = 21232f297a57a5a743894a0e4a801fc3  // Password can be set with it's md5 value as well
   // ArduinoOTA.setPasswordHash("21232f297a57a5a743894a0e4a801fc3");
 
   ArduinoOTA.onStart([]() {
@@ -121,11 +121,6 @@ void setupWiFi_OTA () {
     Serial.println("Connection Failed! Rebooting...");
     delay(5000);
     ESP.restart();
-    //if(conectionAttempt1PastTime > 10000){
-    //  WiFi.begin(ssid1, password1);
-    //  WiFi.softAP(ssid1);
-    //  continue;
-    //}
   }
   Serial.println("Ready");
   Serial.print("IP address: ");
@@ -134,24 +129,27 @@ void setupWiFi_OTA () {
 
 }
 
-// You can specify the time server pool and the offset, (in seconds)
-// additionaly you can specify the update interval (in milliseconds). //for pool settings europe.
-int GTMOffset = 2;
-NTPClient timeClient(ntpUDP, "de.pool.ntp.org", GTMOffset*60*60, 60*60*1000);
-
-U8G2_SH1106_128X64_NONAME_F_HW_I2C oled(U8G2_R0);
+// You can specify the time server pool and the offse (in seconds), additionaly you can specify the update interval (in milliseconds).
 
 void setup() {
+  Serial.begin(115200);
+  Wire.begin(); // Start the I2C
+  RTC.begin();
   oled.begin();
-    Serial.begin(115200);
-    setupWiFi_OTA();
-
-//  pinMode(showclock,OUTPUT);
- 
-  while ( WiFi.status() != WL_CONNECTED ) {
+  RTC.adjust(DateTime(__DATE__, __TIME__));
+  adjustTimer.set(timerPeriod, RTCadjust_update);
+  setupWiFi_OTA();
+  //int times = 0;
+  while ( WiFi.status() != WL_CONNECTED){// && times < 2000000) {
     delay ( 500 );
     Serial.print ( "." );
-  }
+    //times++;
+  }/*
+  if( WiFi.status() != WL_CONNECTED && times > 2000000){
+    WiFi.disconnect();
+    WiFi.begin(ssid1, password1);
+    WiFi.softAP(ssid1);
+  } */
  timeClient.begin();
   delay ( 1000 );
   if (timeClient.update()){
@@ -159,23 +157,21 @@ void setup() {
      unsigned long epoch = timeClient.getEpochTime();
      // HERE I'M UPDATE LOCAL CLOCK
      setTime(epoch);
+     Serial.println(d_Date + " " + t_Time + " " + w_Weekday);
   }else{
-     Serial.print ( "NTP Update not WORK!!" );
-       oled.firstPage();
-  do{
-    oled.setFont(pixel);
-    oled.drawStr(43,25,"error");
-  }while(oled.nextPage());
+    Serial.print ( "NTP Update not WORK!!" );
+    oled.firstPage();
+    do{
+      oled.setFont(pixel);
+      oled.drawStr(43,25,"error");
+    }while(oled.nextPage());
   }
   oled.clear();
 }
+  
 void loop() {
+  adjustTimer.update();
   ArduinoOTA.handle();
-//  int showfunc = digitalRead(showclock); 
-  Serial.println(getTimeString(now()));
-  String w_Weekday = daysOfTheWeek[timeClient.getDay()];
-  String t_Time = getTimeString(now()); 
-  String d_Date = getDateString(now());
     oled.firstPage();
     do{
       if(t_Time == "6:30(00)"){
