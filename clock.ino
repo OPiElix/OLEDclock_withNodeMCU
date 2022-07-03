@@ -134,6 +134,7 @@ void setupWiFi_OTA () {
 void setup() {
   Serial.begin(115200);
   Wire.begin(); // Start the I2C
+  Wire.setClock(10000);
   RTC.begin();
   oled.begin();
   RTC.adjust(DateTime(__DATE__, __TIME__));
