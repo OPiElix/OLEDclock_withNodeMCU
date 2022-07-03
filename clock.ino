@@ -16,10 +16,10 @@
 #define fub  u8g2_font_fub17_t_symbol
 #define logis u8g2_font_logisoso16_tn
  
-const char *ssid     = "Home-WDE3";
-const char *password = "cataliNn2015";
-const char *ssid1     = "OpiliteX_HsP";
-const char *password1 = "hYp3r70ACe";
+const char *ssid     = "SSID";
+const char *password = "PWD";
+//const char *ssid1     = "SSID1";
+//const char *password1 = "PWD1";
 //const int showclock = D7;
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
@@ -115,8 +115,8 @@ void setupWiFi_OTA () {
   WiFi.softAP(ssid);
   setupOTA();
   delay(500);
-  int conectionAttempt1PastTime = millis();
-  int conectionAttempt2PastTime;// = millis()
+  //int conectionAttempt1PastTime = millis();
+  //int conectionAttempt2PastTime;// = millis()
   while (WiFi.waitForConnectResult() != WL_CONNECTED) {
     Serial.println("Connection Failed! Rebooting...");
     delay(5000);
