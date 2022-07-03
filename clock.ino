@@ -19,10 +19,10 @@
 #define fub  u8g2_font_fub17_t_symbol
 #define logis u8g2_font_logisoso16_tn
 const unsigned int timerPeriod = 7200000;
-const char *ssid     = "Home-WDE3";
-const char *password = "cataliNn2015";
-const char *ssid1     = "OpiliteX_HsP";
-const char *password1 = "hYp3r70ACe";
+const char *ssid     = "-";
+const char *password = "-";
+const char *ssid1     = "-";
+const char *password1 = "-";
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 int GTMOffset = 2;
 
