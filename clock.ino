@@ -17,9 +17,9 @@
 #define logis u8g2_font_logisoso16_tn
  
 const char *ssid     = "Home-WDE3";
-const char *password = "cataliNn2015";
+const char *password = "";
 const char *ssid1     = "OpiliteX_HsP";
-const char *password1 = "hYp3r70ACe";
+const char *password1 = "";
 //const int showclock = D7;
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
